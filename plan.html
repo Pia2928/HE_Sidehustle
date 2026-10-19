@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Plan</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="wrap">
+    <div class="notice">This part is optional and unpaid. Write as much or as little as you like.
+        Your plan saves automatically.</div>
+    <h1>Draft your business plan</h1>
+    <p class="lead">A short plan for the idea you chose. A few sentences per section is plenty.</p>
+
+    <form id="plan">
+        <div class="field">
+            <label for="f-idea">Your idea</label>
+            <span class="hint" id="h-idea">What will you sell or offer?</span>
+            <textarea id="f-idea" name="idea" rows="2" aria-describedby="h-idea"></textarea>
+        </div>
+        <div class="field">
+            <label for="f-customer">Customers</label>
+            <span class="hint" id="h-customer">Who will pay for it, and what problem does it solve for them?</span>
+            <textarea id="f-customer" name="customer" rows="3" aria-describedby="h-customer"></textarea>
+        </div>
+        <div class="field">
+            <label for="f-offer">Offer and price</label>
+            <span class="hint" id="h-offer">What exactly do customers get, and roughly what will you charge?</span>
+            <textarea id="f-offer" name="offer" rows="3" aria-describedby="h-offer"></textarea>
+        </div>
+        <div class="field">
+            <label for="f-first_steps">First three steps</label>
+            <span class="hint" id="h-first_steps">What will you do in the next month to get started?</span>
+            <textarea id="f-first_steps" name="first_steps" rows="4" aria-describedby="h-first_steps"></textarea>
+        </div>
+        <div class="field">
+            <label for="f-resources">Resources needed</label>
+            <span class="hint" id="h-resources">Time, money, skills, tools or people you need.</span>
+            <textarea id="f-resources" name="resources" rows="3" aria-describedby="h-resources"></textarea>
+        </div>
+
+        <div class="actions">
+            <button type="submit" id="submit">Save my plan</button>
+            <button type="button" class="secondary" id="download">Download my plan</button>
+            <span id="status" class="status" role="status" aria-live="polite"></span>
+        </div>
+    </form>
+    <p class="muted">When you are done, use the button below this page to finish.</p>
+</main>
+
+<script src="{{ url_for('static', filename='tracker.js') }}"></script>
+<script>
+// plan page
+(function () {
+    "use strict";
+    const pid = {{ pid|tojson }};
+    const presetIdea = {{ idea|tojson }};
+    const fields = ["idea", "customer", "offer", "first_steps", "resources"];
+    const labels = {
+        idea: "Your idea", customer: "Customers", offer: "Offer and price",
+        first_steps: "First three steps", resources: "Resources needed"
+    };
+    const cond = {{ cond|tojson }};
+    const tracker = StudyTracker.start({ pid: pid, page: "plan", cond: cond, idleMs: 60000 });
+    const statusEl = document.getElementById("status");
+    let dirty = false;
+    let saveTimer = null;
+    let firstInputLogged = false;
+
+    function el(name) { return document.getElementById("f-" + name); }
+
+    function collect() {
+        const out = {};
+        fields.forEach(function (f) { out[f] = el(f).value; });
+        return out;
+    }
+
+    function setStatus(text, ok) {
+        statusEl.textContent = text;
+        statusEl.classList.toggle("ok", !!ok);
+    }
+
+    function save(opts) {
+        opts = opts || {};
+        const body = JSON.stringify({ pid: pid, fields: collect(), submitted: !!opts.submitted });
+        if (opts.beacon && navigator.sendBeacon) {
+            navigator.sendBeacon("api/plan", body);
+            dirty = false;
+            return Promise.resolve();
+        }
+        setStatus("Saving…");
+        return fetch("api/plan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: body,
+            keepalive: true
+        }).then(function (res) {
+            if (!res.ok) { throw new Error("save failed"); }
+            dirty = false;
+            setStatus(opts.submitted ? "Plan saved. Thank you!" : "Saved", true);
+        }).catch(function () {
+            setStatus("Could not save. We'll retry automatically.");
+            dirty = true;
+        });
+    }
+
+    function scheduleSave() {
+        dirty = true;
+        setStatus("Unsaved changes");
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(save, 2000);
+    }
+
+    fields.forEach(function (f) {
+        el(f).addEventListener("input", function () {
+            if (!firstInputLogged) {
+                firstInputLogged = true;
+                tracker.event("plan_first_input", f);
+            }
+            scheduleSave();
+        });
+    });
+
+    // Safety net: retry unsaved changes and flush on exit.
+    setInterval(function () { if (dirty) { save(); } }, 15000);
+    document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden" && dirty) { save({ beacon: true }); }
+    });
+    window.addEventListener("pagehide", function () { if (dirty) { save({ beacon: true }); } });
+
+    document.getElementById("plan").addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        clearTimeout(saveTimer);
+        save({ submitted: true });
+    });
+
+    document.getElementById("download").addEventListener("click", function () {
+        const data = collect();
+        let text = "My side-business plan\n=====================\n\n";
+        fields.forEach(function (f) {
+            text += labels[f] + "\n" + (data[f].trim() || "-") + "\n\n";
+        });
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "my-business-plan.txt";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        tracker.event("plan_downloaded");
+        if (dirty) { save(); }
+    });
+
+    // Restore a saved draft, or prefill the chosen idea passed from Gorilla.
+    fetch("api/plan?pid=" + encodeURIComponent(pid))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            const saved = data.fields || {};
+            fields.forEach(function (f) { if (saved[f]) { el(f).value = saved[f]; } });
+            if (!saved.idea && presetIdea) { el("idea").value = presetIdea; }
+        })
+        .catch(function () {
+            if (presetIdea) { el("idea").value = presetIdea; }
+        });
+})();
+</script>
+</body>
+</html>

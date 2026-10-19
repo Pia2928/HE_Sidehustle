@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Next-Step Guide</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="wrap">
+    <div class="notice">This part is optional and unpaid. You have already received your completion code
+        and can leave at any time.</div>
+    <h1>Your next steps</h1>
+    <p class="lead">A short guide (about 5 minutes) to turning your chosen idea into a real side business.
+        Open any section that interests you.</p>
+
+    <details data-section="validate">
+        <summary>1. Check that people want it</summary>
+        <ul>
+            <li>Describe your idea in one sentence to five people who could be customers.</li>
+            <li>Ask what they use today and what annoys them about it, not whether they like your idea.</li>
+            <li>Look for existing businesses offering something similar. Competition often means there is demand.</li>
+        </ul>
+    </details>
+
+    <details data-section="customers">
+        <summary>2. Find your first customers</summary>
+        <ul>
+            <li>Start with people you can reach easily: friends, colleagues, local groups, online communities.</li>
+            <li>Offer a small trial or first version at a fair price to learn what people value.</li>
+            <li>Write down where your ideal customers spend time, online and offline.</li>
+        </ul>
+    </details>
+
+    <details data-section="costs">
+        <summary>3. Work out costs and price</summary>
+        <ul>
+            <li>List what you need to start: tools, materials, software, a simple website.</li>
+            <li>Estimate your cost per sale and the price customers would pay.</li>
+            <li>Ask: how many sales a month would make this worth my time?</li>
+        </ul>
+    </details>
+
+    <details data-section="time">
+        <summary>4. Fit it around your job</summary>
+        <ul>
+            <li>Block a few fixed hours each week for the business.</li>
+            <li>Check your employment contract for rules about outside work or conflicts of interest.</li>
+            <li>Choose the smallest version of the idea you can test in a month.</li>
+        </ul>
+    </details>
+
+    <details data-section="admin">
+        <summary>5. Sort out the basics</summary>
+        <ul>
+            <li>Read HMRC's guidance on side income to see whether and when you need to register.</li>
+            <li>Keep simple records of income and costs from the first sale.</li>
+            <li>Check whether your idea needs insurance, licences or permissions.</li>
+        </ul>
+    </details>
+
+    <p class="muted">When you are done, use the button below this page to continue or finish.</p>
+</main>
+
+<script src="{{ url_for('static', filename='tracker.js') }}"></script>
+<script>
+// guide page
+(function () {
+    "use strict";
+    const pid = {{ pid|tojson }};
+    const cond = {{ cond|tojson }};
+    // Reading is quiet, so allow a longer pause before counting the participant as idle.
+    const tracker = StudyTracker.start({ pid: pid, page: "guide", cond: cond, idleMs: 90000 });
+    document.querySelectorAll("details[data-section]").forEach(function (el) {
+        el.addEventListener("toggle", function () {
+            tracker.event(el.open ? "section_opened" : "section_closed", el.dataset.section);
+        });
+    });
+})();
+</script>
+</body>
+</html>

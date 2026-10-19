@@ -1,0 +1,17 @@
+{% extends "flow_base.html" %}
+{% block content %}
+<section class="hero">
+    <h1>{{ c.title }}</h1>
+    {% for paragraph in c.body %}
+    <p class="lead">{{ paragraph }}</p>
+    {% endfor %}
+    <button id="next" type="button">{{ c.button }}</button>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("next").addEventListener("click", function () {
+    Flow.submit({}, this);
+});
+</script>
+{% endblock %}

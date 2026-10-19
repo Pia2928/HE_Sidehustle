@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idea Assistant</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='chatui.css') }}">
+</head>
+<body>
+<div class="app">
+    <header class="topbar">
+        <span class="brand">
+            <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9z"/>
+                <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>
+            </svg>
+            Idea Assistant
+        </span>
+    </header>
+
+    <main id="scroller" class="scroller">
+        <div id="thread" class="thread" role="log" aria-live="polite" aria-label="Conversation">
+            <section id="empty" class="empty">
+                <h1>What side business could you start?</h1>
+                <p>{{ opening }}</p>
+                <div class="starters">
+                    {% for s in starters %}
+                    <button type="button" class="starter">{{ s }}</button>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="composer-wrap">
+        <form id="composer" class="composer">
+            <label for="input" class="visually-hidden">Message the assistant</label>
+            <textarea id="input" rows="1" maxlength="{{ max_chars }}" placeholder="Message the assistant…"></textarea>
+            <button id="send" type="submit" aria-label="Send message" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+        </form>
+        <p class="disclaimer">The assistant can make mistakes. Your conversation is recorded for research purposes.
+            Please don't share your name, address or employer.</p>
+    </footer>
+</div>
+
+<script src="{{ url_for('static', filename='tracker.js') }}"></script>
+<script src="{{ url_for('static', filename='chatui.js') }}"></script>
+<script>
+ChatUI.init({
+    pid: {{ pid|tojson }},
+    cond: {{ cond|tojson }},
+    interests: {{ interests|tojson }},
+    profileFields: {{ profile_fields|tojson }}
+});
+</script>
+</body>
+</html>

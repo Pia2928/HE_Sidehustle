@@ -1,0 +1,158 @@
+{% extends "flow_base.html" %}
+{% block content %}
+<div class="ideation-head">
+    <h1>{{ c.title }}</h1>
+    <div id="timer" class="timer" role="timer" aria-live="off" aria-label="Time remaining"></div>
+</div>
+<p class="lead">{{ c.body }}</p>
+<p class="muted">{{ reminder }}</p>
+
+{% if prime %}
+<details class="prime-recap" open>
+    <summary>What you wrote about yourself</summary>
+    {% for question, answer in prime %}
+    <p class="recap-q">{{ question }}</p>
+    <p class="recap-a">{{ answer }}</p>
+    {% endfor %}
+</details>
+{% endif %}
+
+{% if is_ai %}
+<section class="chat-section" aria-label="Assistant">
+    {% include "_chat_panel.html" %}
+</section>
+{% endif %}
+
+<section aria-labelledby="ideas-heading">
+    <h2 id="ideas-heading">Your ideas <span id="count" class="muted"></span></h2>
+    <form id="add-form" class="chat-input">
+        <label for="idea-input" class="visually-hidden">New idea</label>
+        <input id="idea-input" type="text" maxlength="{{ max_idea_chars }}" autocomplete="off"
+               placeholder="Type an idea and press Enter">
+        <button id="add" type="submit">Add</button>
+    </form>
+    <ol id="idea-list" class="idea-list"></ol>
+</section>
+
+<div class="actions">
+    <button id="next" type="button">Continue</button>
+    <span id="next-hint" class="muted" aria-live="polite"></span>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if is_ai %}
+<script src="{{ url_for('static', filename='chat.js') }}"></script>
+<script>
+StudyChat.init({
+    pid: Flow.pid,
+    cond: {{ cond|tojson }},
+    interests: "",
+    opening: {{ opening|tojson }},
+    logEl: document.getElementById("log"),
+    formEl: document.getElementById("chat-form"),
+    inputEl: document.getElementById("chat-input"),
+    sendEl: document.getElementById("chat-send")
+});
+</script>
+{% endif %}
+<script>
+(function () {
+    "use strict";
+    const minIdeas = {{ min_ideas|tojson }};
+    const maxIdeas = {{ max_ideas|tojson }};
+    const minChars = {{ min_idea_chars|tojson }};
+    let remaining = {{ remaining|tojson }};
+
+    const timerEl = document.getElementById("timer");
+    const listEl = document.getElementById("idea-list");
+    const countEl = document.getElementById("count");
+    const input = document.getElementById("idea-input");
+    const nextBtn = document.getElementById("next");
+    const hint = document.getElementById("next-hint");
+
+    let ideas = [];
+    try { ideas = JSON.parse(Flow.loadDraft("ideas") || "[]"); } catch (e) { ideas = []; }
+    if (!Array.isArray(ideas)) { ideas = []; }
+
+    function persist() { Flow.saveDraft("ideas", JSON.stringify(ideas)); }
+
+    function render() {
+        listEl.textContent = "";
+        ideas.forEach(function (text, i) {
+            const li = document.createElement("li");
+            const span = document.createElement("span");
+            span.textContent = text;
+            const del = document.createElement("button");
+            del.type = "button";
+            del.className = "link-button";
+            del.textContent = "Remove";
+            del.setAttribute("aria-label", "Remove idea " + (i + 1));
+            del.addEventListener("click", function () {
+                ideas.splice(i, 1);
+                persist();
+                render();
+                Flow.tracker.event("idea_removed", String(i));
+            });
+            li.appendChild(span);
+            li.appendChild(del);
+            listEl.appendChild(li);
+        });
+        countEl.textContent = ideas.length ? "(" + ideas.length + ")" : "";
+        updateNext();
+    }
+
+    function updateNext() {
+        if (remaining > 0) {
+            nextBtn.disabled = true;
+            hint.textContent = "";
+        } else if (ideas.length < minIdeas) {
+            nextBtn.disabled = true;
+            hint.textContent = "Add at least " + minIdeas + " ideas to continue.";
+        } else {
+            nextBtn.disabled = false;
+            hint.textContent = "Time’s up. Continue when you’re ready.";
+        }
+    }
+
+    document.getElementById("add-form").addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        const text = input.value.trim();
+        if (text.length < minChars) { return; }
+        if (ideas.length >= maxIdeas) {
+            Flow.showError("You have reached the maximum of " + maxIdeas + " ideas.");
+            return;
+        }
+        ideas.push(text);
+        input.value = "";
+        persist();
+        render();
+        Flow.tracker.event("idea_added", String(ideas.length));
+        input.focus();
+    });
+
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = String(sec % 60).padStart(2, "0");
+        return m + ":" + s;
+    }
+
+    function tick() {
+        timerEl.textContent = remaining > 0 ? formatTime(remaining) : "0:00";
+        timerEl.classList.toggle("timer-low", remaining > 0 && remaining <= 30);
+        updateNext();
+        if (remaining > 0) {
+            remaining -= 1;
+            setTimeout(tick, 1000);
+        }
+    }
+
+    nextBtn.addEventListener("click", function () {
+        Flow.submit({ ideas: ideas }, nextBtn);
+    });
+
+    render();
+    tick();
+    input.focus();
+})();
+</script>
+{% endblock %}

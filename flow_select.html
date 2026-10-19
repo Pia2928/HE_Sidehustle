@@ -1,0 +1,45 @@
+{% extends "flow_base.html" %}
+{% block content %}
+<h1>{{ c.title }}</h1>
+<p class="lead">{{ c.body }}</p>
+<form id="select">
+    <fieldset class="choices">
+        <legend class="visually-hidden">Your ideas</legend>
+        {% for idea in ideas %}
+        <label class="choice">
+            <input type="radio" name="idea" value="{{ loop.index0 }}" required>
+            <span>{{ idea }}</span>
+        </label>
+        {% endfor %}
+    </fieldset>
+    <div class="field">
+        <label for="description">{{ c.describe }}</label>
+        <textarea id="description" name="description" rows="4" maxlength="2000" required></textarea>
+    </div>
+    <button id="next" type="submit">{{ c.button }}</button>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    "use strict";
+    const form = document.getElementById("select");
+    const desc = document.getElementById("description");
+    desc.value = Flow.loadDraft("description");
+    desc.addEventListener("input", function () { Flow.saveDraft("description", desc.value); });
+    form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        const chosen = form.querySelector("input[name=idea]:checked");
+        if (!chosen) {
+            Flow.showError("Please choose one idea.");
+            return;
+        }
+        if (desc.value.trim().length < 20) {
+            Flow.showError("Please describe your idea in a few sentences.");
+            return;
+        }
+        Flow.submit({ index: Number(chosen.value), description: desc.value.trim() }, document.getElementById("next"));
+    });
+})();
+</script>
+{% endblock %}

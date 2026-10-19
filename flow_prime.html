@@ -1,0 +1,42 @@
+{% extends "flow_base.html" %}
+{% block content %}
+<h1>{{ c.title }}</h1>
+<p class="lead">{{ c.intro }}</p>
+<form id="prime">
+    {% for q in c.questions %}
+    <div class="field">
+        <label for="q-{{ q.key }}">{{ loop.index }}. {{ q.text }}</label>
+        <textarea id="q-{{ q.key }}" name="{{ q.key }}" rows="4" maxlength="{{ max_chars }}"
+                  placeholder="{{ q.placeholder }}" required></textarea>
+    </div>
+    {% endfor %}
+    <button id="next" type="submit">{{ c.button }}</button>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    "use strict";
+    const form = document.getElementById("prime");
+    const fields = Array.from(form.querySelectorAll("textarea"));
+    fields.forEach(function (el) {
+        el.value = Flow.loadDraft(el.name);
+        el.addEventListener("input", function () { Flow.saveDraft(el.name, el.value); });
+    });
+    form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        const data = {};
+        let missing = false;
+        fields.forEach(function (el) {
+            data[el.name] = el.value.trim();
+            if (data[el.name].length < 2) { missing = true; }
+        });
+        if (missing) {
+            Flow.showError("Please answer every question.");
+            return;
+        }
+        Flow.submit(data, document.getElementById("next"));
+    });
+})();
+</script>
+{% endblock %}

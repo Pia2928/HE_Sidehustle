@@ -1,0 +1,9 @@
+{# _chat_panel.html: shared chat markup, used by chat.html and flow_ideation.html #}
+<div id="log" class="chat-log" role="log" aria-live="polite" aria-label="Conversation with the assistant"></div>
+<form id="chat-form" class="chat-input">
+    <label for="chat-input" class="visually-hidden">Your message to the assistant</label>
+    <textarea id="chat-input" rows="2" maxlength="{{ max_chars }}" placeholder="Type your message…" required></textarea>
+    <button id="chat-send" type="submit">Send</button>
+</form>
+<p class="muted">Your conversation is recorded for research purposes. Please do not share personal
+    details such as your name, address or employer.</p>

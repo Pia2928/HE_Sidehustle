@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idea Workspace</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='chatui.css') }}">
+</head>
+<body>
+<div class="app">
+    <header class="topbar">
+        <span class="brand">
+            <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 21h6v-1H9v1zm3-19a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/>
+            </svg>
+            Idea Workspace
+        </span>
+    </header>
+
+    <main id="scroller" class="scroller">
+        <div id="thread" class="thread" role="log" aria-live="polite" aria-label="Your notes and thinking prompts">
+            <section id="empty" class="empty">
+                <h1>{{ w.title }}</h1>
+                <p>{{ w.subtitle }}</p>
+                <div class="starters">
+                    {% for s in wc.starters %}
+                    <button type="button" class="starter" data-index="{{ loop.index0 }}">{{ s }}</button>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="composer-wrap">
+        <div class="tools">
+            <button id="prompt-btn" type="button" class="tool">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21h6v-1H9v1zm3-19a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/></svg>
+                {{ w.prompt_button }}
+            </button>
+        </div>
+        <form id="composer" class="composer">
+            <label for="input" class="visually-hidden">Write a note</label>
+            <textarea id="input" rows="1" maxlength="{{ max_chars }}" placeholder="{{ w.placeholder }}"></textarea>
+            <button id="send" type="submit" aria-label="Add note" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+        </form>
+        <p class="disclaimer">Your notes are recorded for research purposes. Please don't share your name, address or employer.</p>
+    </footer>
+</div>
+
+<script src="{{ url_for('static', filename='tracker.js') }}"></script>
+<script src="{{ url_for('static', filename='chatui.js') }}"></script>
+<script src="{{ url_for('static', filename='workspace.js') }}"></script>
+<script>
+Workspace.init({
+    pid: {{ pid|tojson }},
+    cond: {{ cond|tojson }},
+    intro: {{ wc.intro|tojson }},
+    starters: {{ wc.starters|tojson }},
+    prompts: {{ wc.prompts|tojson }},
+    showBackground: {{ show_background|tojson }},
+    backgroundLabels: {{ background_labels|tojson }},
+    profileFields: {{ profile_fields|tojson }}
+});
+</script>
+</body>
+</html>

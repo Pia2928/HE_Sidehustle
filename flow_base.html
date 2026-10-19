@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Side Hustle Coaching</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="wrap">
+    {% if step <= n_steps %}
+    <div class="progress" aria-label="Step {{ step }} of {{ n_steps }}">
+        <div class="progress-bar" style="width: {{ (step / n_steps * 100)|round }}%"></div>
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+    <p id="status" class="status error-text" role="alert"></p>
+</main>
+
+<script src="{{ url_for('static', filename='tracker.js') }}"></script>
+<script>
+// flow helpers shared by all steps
+window.Flow = (function () {
+    "use strict";
+    const pid = {{ pid|tojson }};
+    const stage = {{ stage|tojson }};
+    const tracker = StudyTracker.start({ pid: pid, page: stage, cond: {{ cond|tojson }}, idleMs: 60000 });
+    const statusEl = document.getElementById("status");
+
+    function showError(msg) { statusEl.textContent = msg || ""; }
+
+    async function submit(data, button) {
+        showError("");
+        if (button) { button.disabled = true; }
+        try {
+            const res = await fetch("api/step", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pid: pid, stage: stage, data: data || {} })
+            });
+            const body = await res.json();
+            if (res.ok && body.next) {
+                window.location.replace(body.next);
+                return;
+            }
+            showError(body.error || "Something went wrong. Please try again.");
+        } catch (e) {
+            showError("Connection problem. Please try again.");
+        }
+        if (button) { button.disabled = false; }
+    }
+
+    function draftKey(name) { return "draft:" + pid + ":" + stage + ":" + name; }
+    function loadDraft(name) {
+        try { return window.localStorage.getItem(draftKey(name)) || ""; } catch (e) { return ""; }
+    }
+    function saveDraft(name, value) {
+        try { window.localStorage.setItem(draftKey(name), value); } catch (e) { /* storage unavailable */ }
+    }
+
+    return { pid: pid, stage: stage, tracker: tracker, submit: submit, showError: showError,
+             loadDraft: loadDraft, saveDraft: saveDraft };
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
