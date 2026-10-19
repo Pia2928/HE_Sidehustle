@@ -1,0 +1,402 @@
+<title>UK Side Hustle Finder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a working tool. Filter bar on top, ranked result list below; tabs switch between finder, catalogue, regions, AI text and sources. */
+:root {
+    --bg: #f5f8f7;
+    --surface: #ffffff;
+    --ink: #17221f;
+    --muted: #55645f;
+    --line: #d9e2df;
+    --accent: #0e6b5b;
+    --accent-soft: #dcefe9;
+    --rule: #8a5a00;
+    --rule-soft: #fbefd6;
+    --dot-off: #d5dedb;
+    --font-display: "Bitter", Georgia, "Times New Roman", serif;
+    --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.84rem;
+    --step-0: 1rem;
+    --step-1: 1.2rem;
+    --step-2: 1.55rem;
+    --step-3: 2.1rem;
+    --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #0f1614; --surface: #16201d; --ink: #e5eeeb; --muted: #9fb0aa; --line: #2a3733;
+        --accent: #5cc9ad; --accent-soft: #173a32; --rule: #e8b04a; --rule-soft: #3a2c10; --dot-off: #33423e;
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --bg: #0f1614; --surface: #16201d; --ink: #e5eeeb; --muted: #9fb0aa; --line: #2a3733;
+    --accent: #5cc9ad; --accent-soft: #173a32; --rule: #e8b04a; --rule-soft: #3a2c10; --dot-off: #33423e;
+    color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+    background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0);
+    line-height: 1.55;
+}
+.wrap {
+    max-width: 1080px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px 56px;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); font-weight: 700; }
+h3 { font-size: var(--step-1); font-weight: 500; }
+p { margin: 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: var(--step--1); }
+
+header.top { display: grid; gap: 10px; margin-bottom: 20px; }
+.lede { max-width: 68ch; color: var(--muted); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: var(--step--1); color: var(--muted); }
+.facts b { color: var(--ink); font-weight: 700; }
+
+nav.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+nav.tabs button {
+    font: inherit; font-weight: 700; color: var(--muted); background: none; border: 0;
+    border-bottom: 3px solid transparent; padding: 10px 12px; cursor: pointer;
+}
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* Filters */
+.filters {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px;
+    margin-bottom: 18px;
+}
+.field { display: grid; gap: 6px; min-width: 0; }
+.field label, .field .label {
+    font-size: var(--step--1); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+select {
+    font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; width: 100%;
+}
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button {
+    font: inherit; font-size: var(--step--1); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 999px; padding: 6px 12px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+
+/* Results */
+ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.card {
+    display: grid; grid-template-columns: 3rem 1fr auto; gap: 4px 16px; align-items: start;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px;
+}
+.rank { font-family: var(--font-display); font-size: var(--step-2); color: var(--accent); line-height: 1; }
+.card .body { display: grid; gap: 8px; min-width: 0; }
+.card .cost { text-align: right; display: grid; gap: 2px; }
+.card .cost .mono { font-size: var(--step-1); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+    font-size: var(--step--1); border-radius: 999px; padding: 2px 10px; background: var(--accent-soft); color: var(--ink);
+}
+.chip.cat { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+.rules { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rules li {
+    font-size: var(--step--1); background: var(--rule-soft); border-radius: 8px; padding: 6px 10px;
+    display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline;
+}
+.rules .tag { font-weight: 700; color: var(--rule); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.72rem; }
+.fit { font-size: var(--step--1); color: var(--muted); }
+.fit b { color: var(--ink); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.74rem; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+td.rname { white-space: nowrap; }
+td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dots { display: inline-flex; gap: 3px; vertical-align: middle; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--dot-off); display: inline-block; }
+.dots i.on { background: var(--accent); }
+
+/* Panels */
+.panel { display: grid; gap: 16px; }
+.note {
+    border-left: 4px solid var(--rule); background: var(--rule-soft); border-radius: 0 8px 8px 0; padding: 10px 14px;
+    font-size: var(--step--1); max-width: 80ch;
+}
+.prompt-block { display: grid; gap: 8px; }
+.prompt-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+pre {
+    margin: 0; max-height: 420px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.5;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px;
+}
+.btn {
+    font: inherit; font-weight: 700; font-size: var(--step--1); color: var(--surface); background: var(--accent);
+    border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+}
+.sources { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.sources li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; }
+.sources .key { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
+
+@media (max-width: 560px) {
+    .card { grid-template-columns: 2rem 1fr; }
+    .card .cost { grid-column: 2; text-align: left; display: flex; gap: 8px; align-items: baseline; }
+    h1 { font-size: var(--step-2); }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .card { transition: border-color .15s ease; }
+    .card:hover { border-color: var(--accent); }
+}
+</style>
+
+<div class="wrap">
+    <header class="top">
+        <h1>UK Side Hustle Finder</h1>
+        <p class="lede">Side hustles that need no specific training and little money to start, ranked for a region and type of area.
+            This is the knowledge base both AI assistants in the study draw on.</p>
+        <div class="facts" id="facts"></div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+        <button role="tab" id="tab-finder" aria-controls="finder" aria-selected="true">Finder</button>
+        <button role="tab" id="tab-catalogue" aria-controls="catalogue" aria-selected="false">Catalogue</button>
+        <button role="tab" id="tab-regions" aria-controls="regions" aria-selected="false">Regions</button>
+        <button role="tab" id="tab-ai" aria-controls="ai" aria-selected="false">For the AI</button>
+        <button role="tab" id="tab-sources" aria-controls="sources" aria-selected="false">Sources</button>
+    </nav>
+
+    <section id="finder" role="tabpanel" aria-labelledby="tab-finder">
+        <form class="filters" id="filters">
+            <div class="field">
+                <label for="f-region">Region</label>
+                <select id="f-region"></select>
+            </div>
+            <div class="field">
+                <label for="f-area">Type of area</label>
+                <select id="f-area">
+                    <option value="">Any</option>
+                    <option value="city">City</option>
+                    <option value="town">Town or suburb</option>
+                    <option value="rural">Village or rural area</option>
+                </select>
+            </div>
+            <div class="field">
+                <span class="label" id="l-budget">Start-up budget</span>
+                <div class="seg" role="group" aria-labelledby="l-budget" id="f-budget">
+                    <button type="button" data-v="0">£0</button>
+                    <button type="button" data-v="50">Up to £50</button>
+                    <button type="button" data-v="250" aria-pressed="true">Up to £250</button>
+                </div>
+            </div>
+            <div class="field">
+                <span class="label" id="l-mode">How</span>
+                <div class="seg" role="group" aria-labelledby="l-mode" id="f-mode">
+                    <button type="button" data-v="any" aria-pressed="true">Any</button>
+                    <button type="button" data-v="in_person">In person</button>
+                    <button type="button" data-v="online">Online</button>
+                </div>
+            </div>
+        </form>
+        <div class="summary">
+            <h2 id="result-title">Best fits</h2>
+            <p class="small muted" id="result-count"></p>
+        </div>
+        <ol class="results" id="results"></ol>
+    </section>
+
+    <section id="catalogue" role="tabpanel" aria-labelledby="tab-catalogue" hidden>
+        <div class="panel">
+            <p class="lede">All side hustles in the knowledge base. Each needs no specific training or qualification and costs up to about £250 to start.</p>
+            <div class="table-wrap"><table id="cat-table"></table></div>
+        </div>
+    </section>
+
+    <section id="regions" role="tabpanel" aria-labelledby="tab-regions" hidden>
+        <div class="panel">
+            <p class="note"><b>Qualitative weights.</b> How strongly each customer group features in each region (0 to 3 dots) is a judgement,
+                not a measured value. Check each column against the dataset named under the table before the pilot.</p>
+            <div class="table-wrap"><table id="region-table"></table></div>
+            <div class="table-wrap"><table id="verify-table"></table></div>
+        </div>
+    </section>
+
+    <section id="ai" role="tabpanel" aria-labelledby="tab-ai" hidden>
+        <div class="panel">
+            <p class="lede">Paste these into Gorilla under Settings &rarr; AI in the matching brainstorm task. Both contain the same rules, catalogue and regional notes;
+                the personalised one adds the participant's interest profile. Gorilla fills the <span class="mono">${store:…}</span> fields from the survey.</p>
+            <div class="prompt-block">
+                <div class="prompt-head"><h3>generic_ai</h3><button class="btn" type="button" data-copy="p-generic">Copy text</button></div>
+                <pre id="p-generic" tabindex="0"></pre>
+            </div>
+            <div class="prompt-block">
+                <div class="prompt-head"><h3>personalized_ai</h3><button class="btn" type="button" data-copy="p-personal">Copy text</button></div>
+                <pre id="p-personal" tabindex="0"></pre>
+            </div>
+        </div>
+    </section>
+
+    <section id="sources" role="tabpanel" aria-labelledby="tab-sources" hidden>
+        <div class="panel">
+            <p class="lede" id="sources-lede"></p>
+            <ul class="sources" id="source-list"></ul>
+        </div>
+    </section>
+</div>
+
+<script>
+const DATA = {"checked_on": "16 October 2026", "sources": {"food_registration": {"title": "Starting a food business (GOV.UK / Food Standards Agency)", "url": "https://www.gov.uk/guidance/starting-a-food-business", "finding": "Applies to England, Wales and Northern Ireland. If you provide food on a regular and organised basis you are a food business and must register with the local authority at least 28 days before trading. Registration is free and can't be refused. A food hygiene certificate is not compulsory, but you must be able to show you've been adequately trained in food hygiene. Home businesses can expect a hygiene inspection and may need permission from their mortgage lender or landlord."}, "childcare_exemptions": {"title": "Childcare registration exemptions (GOV.UK / Ofsted)", "url": "https://www.gov.uk/guidance/registration-exemptions", "finding": "Applies to England. Babysitters looking after children at home between 6pm and 2am, nannies for up to 2 families in one child's home, and people only looking after children over 8 in someone's home don't have to register with Ofsted. Only one exemption can be used and it must cover all the care you give. Care of under 2 hours a day per child can't be registered, unless it is before- or after-school care."}, "dbs_self_employed": {"title": "DBS checks for self-employed people and personal employees (GOV.UK)", "url": "https://www.gov.uk/guidance/dbs-checks-for-self-employed-people-and-personal-employees", "finding": "Self-employed people apply for their own check through a DBS Umbrella Body, if their role is eligible; for example, a self-employed tutor working with children can apply for an Enhanced with Barred List check. Clients can ask to see the certificate."}, "dog_walking_licence": {"title": "Dog walking businesses (Barnsley Council, example of council guidance in England)", "url": "https://www.barnsley.gov.uk/services/animal-welfare-and-licences/dog-walking-businesses", "finding": "One council's guidance: you don't need a licence to walk dogs or visit them in the owner's home. Defra is reviewing possible licensing or registration for professional dog walkers."}, "home_boarding_licence": {"title": "Home boarding for dogs: licensing statutory guidance (GOV.UK / Defra)", "url": "https://www.gov.uk/government/publications/animal-activities-licensing-guidance-for-local-authorities/home-boarding-for-dogs-licensing-statutory-guidance-for-local-authorities", "finding": "Applies to England. Boarding dogs in your own home needs a council licence if it is carried out as a commercial business; the guidance's business test refers to trading income above the £1,000 trading allowance. Boarding cats is licensed separately."}, "market_stall_licence": {"title": "Market stall licence (GOV.UK)", "url": "https://www.gov.uk/market-stall-licence", "finding": "To run a market stall as a trader you need a temporary ('casual') or permanent licence from the local council. The page does not cover car-boot sales."}, "trading_allowance": {"title": "Tax help for side hustles (HMRC campaign, GOV.UK)", "url": "https://taxhelpforhustles.campaign.gov.uk/i-work-for-myself", "finding": "You have a single £1,000 tax-free trading allowance per tax year across all side hustles. Above that you must tell HMRC. Occasionally selling unwanted personal items is unlikely to be taxable; you only need to tell HMRC if a single item or collection sells for over £6,000."}, "register_sa": {"title": "Register for Self Assessment (GOV.UK)", "url": "https://www.gov.uk/register-for-self-assessment", "finding": "If you need to send a tax return and haven't before, register by 5 October after the end of the tax year in which you had the income."}, "online_sellers": {"title": "Information for online sellers (GOV.UK news, 4 December 2024)", "url": "https://www.gov.uk/government/news/information-for-online-sellers", "finding": "Platforms such as eBay and Vinted report sellers who sold at least 30 items or earned roughly £1,700 in a year. Being reported doesn't automatically mean tax is due, and selling unwanted belongings hasn't changed. Tax may be due if you buy to resell, make goods to sell or offer services online and that income is over £1,000 before expenses in a tax year."}, "side_hustle_survey": {"title": "Side hustle statistics UK (Finder, survey by Censuswide, 3-6 January 2026, n=2,000 GB adults)", "url": "https://www.finder.com/uk/side-hustle-statistics", "finding": "46% of GB adults report having a side hustle (Censuswide for Finder). Finder separately cites unnamed external research ranking selling old clothes on Vinted or similar as the most popular type. Commercial survey: use as context, not as an official figure."}, "private_hire": {"title": "Taxi and private hire driver licence (GOV.UK)", "url": "https://www.gov.uk/taxi-driver-licence", "finding": "Driving people for payment needs a private hire licence from the council (TfL in London), which can involve medical, enhanced DBS and knowledge checks."}, "sia_licence": {"title": "Find out if you need an SIA licence (GOV.UK)", "url": "https://www.gov.uk/guidance/find-out-if-you-need-an-sia-licence", "finding": "Key holding for a fee under a contract is an activity that can need a Security Industry Authority licence."}, "waste_carrier": {"title": "Register as a waste carrier, broker or dealer (GOV.UK, England)", "url": "https://www.gov.uk/waste-carrier-or-broker-registration", "finding": "Transporting waste as part of a business, including garden waste or packaging you take away from customers, needs waste carrier registration in England; Wales, Scotland and Northern Ireland have their own schemes."}}, "drivers": {"time_poor": "Busy workers and commuters short on time", "families": "Families with children", "older": "Older people and retirees", "pet_owners": "Pet owners", "students": "Students and young adults", "tourists": "Visitors and holiday lets", "small_biz": "Small local businesses", "renters": "Renters and people moving home", "rural": "Rural residents far from services", "online": "Online buyers anywhere in the UK"}, "hustles": [{"id": "babysitting", "name": "Evening babysitting", "category": "Care and home services", "what": "Looking after children in their own home so parents can go out.", "cost": [0, 0], "mode": "in_person", "customers": ["families"], "areas": ["city", "town", "rural"], "rules": [{"text": "In England, babysitting in the child's home only between 6pm and 2am doesn't need Ofsted registration; daytime or after-school care needs a different exemption.", "source": "childcare_exemptions"}, {"text": "If your role is eligible, you can apply for your own DBS check through an Umbrella Body, and parents can ask to see it.", "source": "dbs_self_employed"}], "cost_label": "£0"}, {"id": "dog_walking", "name": "Dog walking", "category": "Care and home services", "what": "Walking dogs for owners who are at work or less mobile.", "cost": [0, 50], "mode": "in_person", "customers": ["pet_owners", "time_poor", "older"], "areas": ["city", "town", "rural"], "rules": [{"text": "No licence needed to walk dogs or visit them in the owner's home (Defra is reviewing this).", "source": "dog_walking_licence"}, {"text": "In England, boarding dogs in your own home as a business needs a council licence.", "source": "home_boarding_licence"}], "cost_label": "up to £50"}, {"id": "pet_sitting", "name": "Pet sitting in the owner's home", "category": "Care and home services", "what": "Feeding and checking on cats, rabbits or dogs while owners are away.", "cost": [0, 0], "mode": "in_person", "customers": ["pet_owners", "tourists", "time_poor"], "areas": ["city", "town", "rural"], "rules": [{"text": "Visiting pets in the owner's home needs no licence.", "source": "dog_walking_licence"}, {"text": "In England, boarding dogs or cats at your home as a business needs a council licence.", "source": "home_boarding_licence"}], "cost_label": "£0"}, {"id": "house_sitting", "name": "House sitting and plant watering", "category": "Care and home services", "what": "Checking homes, feeding pets and watering plants while people are away.", "cost": [0, 0], "mode": "in_person", "customers": ["time_poor", "older", "tourists"], "areas": ["city", "town", "rural"], "rules": [{"text": "Offering paid key holding under a contract can need an SIA licence.", "source": "sia_licence"}], "cost_label": "£0"}, {"id": "cleaning", "name": "Home cleaning", "category": "Care and home services", "what": "Regular or one-off cleaning, including end-of-tenancy cleans.", "cost": [20, 100], "mode": "in_person", "customers": ["time_poor", "older", "renters"], "areas": ["city", "town"], "rules": [], "cost_label": "£20-100"}, {"id": "changeovers", "name": "Holiday-let changeover cleaning", "category": "Care and home services", "what": "Cleaning and resetting holiday cottages and short lets between guests.", "cost": [20, 100], "mode": "in_person", "customers": ["tourists"], "areas": ["rural", "town", "city"], "rules": [], "cost_label": "£20-100"}, {"id": "ironing", "name": "Ironing and laundry service", "category": "Care and home services", "what": "Collecting, ironing and returning clothes.", "cost": [0, 50], "mode": "in_person", "customers": ["time_poor", "older"], "areas": ["city", "town"], "rules": [], "cost_label": "up to £50"}, {"id": "gardening", "name": "Garden tidying and lawn mowing", "category": "Care and home services", "what": "Mowing, weeding, hedge trimming and leaf clearing.", "cost": [0, 250], "mode": "in_person", "customers": ["older", "families", "time_poor", "rural"], "areas": ["town", "rural"], "rules": [{"text": "Taking garden waste away for customers needs waste carrier registration (England).", "source": "waste_carrier"}], "cost_label": "up to £250"}, {"id": "odd_jobs", "name": "Odd jobs and flat-pack assembly", "category": "Care and home services", "what": "Assembling furniture, putting up shelves and small repairs.", "cost": [50, 150], "mode": "in_person", "customers": ["renters", "time_poor", "older"], "areas": ["city", "town"], "rules": [{"text": "Stick to simple jobs; leave gas and electrical installation to registered trades.", "source": null}, {"text": "Taking old packaging or waste away needs waste carrier registration (England).", "source": "waste_carrier"}], "cost_label": "£50-150"}, {"id": "errands", "name": "Errands and shopping for older people", "category": "Care and home services", "what": "Shopping, prescription collection, walking to appointments and company.", "cost": [0, 0], "mode": "in_person", "customers": ["older", "rural"], "areas": ["town", "rural"], "rules": [{"text": "Driving people for payment needs a private hire licence, so offer errands, not paid lifts.", "source": "private_hire"}], "cost_label": "£0"}, {"id": "car_wash", "name": "Car washing at people's homes", "category": "Care and home services", "what": "Washing and cleaning cars on driveways or at workplaces.", "cost": [30, 100], "mode": "in_person", "customers": ["time_poor", "families"], "areas": ["town"], "rules": [], "cost_label": "£30-100"}, {"id": "resell_own", "name": "Selling your own unwanted clothes and items online", "category": "Selling products", "what": "Clearing out wardrobes and homes on Vinted, eBay or Depop.", "cost": [0, 0], "mode": "online", "customers": ["online"], "areas": ["city", "town", "rural"], "rules": [{"text": "Selling your own unwanted things is usually tax-free; platforms report sellers with 30+ sales or about £1,700 a year, which doesn't by itself mean tax is due.", "source": "online_sellers"}], "cost_label": "£0"}, {"id": "resell_secondhand", "name": "Buying and reselling second-hand and vintage finds", "category": "Selling products", "what": "Sourcing clothes, books or homeware from charity shops and car boots and reselling online.", "cost": [50, 200], "mode": "online", "customers": ["online", "students"], "areas": ["city", "town", "rural"], "rules": [{"text": "Buying to resell counts as trading: total trading income over £1,000 a year (before expenses) must be reported to HMRC.", "source": "online_sellers"}], "cost_label": "£50-200"}, {"id": "baking", "name": "Home baking to order", "category": "Selling products", "what": "Birthday cakes, cupcakes or bread for families and local events.", "cost": [30, 100], "mode": "in_person", "customers": ["families", "small_biz"], "areas": ["city", "town", "rural"], "rules": [{"text": "Register as a food business with your council (free) at least 28 days before you start (England, Wales, NI).", "source": "food_registration"}, {"text": "A hygiene certificate isn't compulsory, but you must be able to show you've been adequately trained in food hygiene; expect a home inspection.", "source": "food_registration"}], "cost_label": "£30-100"}, {"id": "upcycling", "name": "Upcycling and reselling furniture", "category": "Selling products", "what": "Painting and refreshing second-hand furniture and selling it locally or online.", "cost": [50, 200], "mode": "both", "customers": ["renters", "online", "students"], "areas": ["town", "rural"], "rules": [{"text": "Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.", "source": "online_sellers"}], "cost_label": "£50-200"}, {"id": "crafts", "name": "Handmade crafts and cards", "category": "Selling products", "what": "Selling knitted, sewn or hand-drawn items online, at fairs or to visitors.", "cost": [30, 100], "mode": "both", "customers": ["online", "tourists"], "areas": ["city", "town", "rural"], "rules": [{"text": "Toys for children must meet toy safety rules; check before selling soft toys.", "source": null}, {"text": "Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.", "source": "online_sellers"}], "cost_label": "£30-100"}, {"id": "market_stall", "name": "Market or car-boot stall", "category": "Selling products", "what": "Selling second-hand goods, crafts or plants at a local market or car-boot sale.", "cost": [10, 50], "mode": "in_person", "customers": ["families", "tourists", "older"], "areas": ["town", "rural"], "rules": [{"text": "Selling at a council market needs a casual or permanent licence from the council.", "source": "market_stall_licence"}], "cost_label": "£10-50"}, {"id": "plants", "name": "Growing and selling plants and seedlings", "category": "Selling products", "what": "Selling cuttings, seedlings or herbs from home or at markets.", "cost": [20, 50], "mode": "in_person", "customers": ["families", "older"], "areas": ["town", "rural"], "rules": [], "cost_label": "£20-50"}, {"id": "printables", "name": "Digital printables and templates", "category": "Selling products", "what": "Selling planners, checklists or party templates as downloads.", "cost": [0, 0], "mode": "online", "customers": ["online"], "areas": ["city", "town", "rural"], "rules": [{"text": "Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.", "source": "online_sellers"}], "cost_label": "£0"}, {"id": "tutoring", "name": "Tutoring a school subject you're good at", "category": "Teaching and helping", "what": "Homework help or exam revision, in person or online.", "cost": [0, 0], "mode": "both", "customers": ["families", "students"], "areas": ["city", "town", "rural"], "rules": [{"text": "Self-employed tutors working with children can apply for their own Enhanced DBS check, and parents can ask to see it.", "source": "dbs_self_employed"}], "cost_label": "£0"}, {"id": "hobby_teaching", "name": "Teaching a hobby or language conversation", "category": "Teaching and helping", "what": "Small classes or one-to-one sessions in something you enjoy, such as knitting or cooking.", "cost": [0, 50], "mode": "both", "customers": ["older", "families", "students"], "areas": ["city", "town", "rural"], "rules": [], "cost_label": "up to £50"}, {"id": "tech_help", "name": "Tech help for older people", "category": "Teaching and helping", "what": "Setting up phones, video calls and online banking, and showing how to use them.", "cost": [0, 0], "mode": "in_person", "customers": ["older", "rural"], "areas": ["town", "rural", "city"], "rules": [], "cost_label": "£0"}, {"id": "smallbiz_help", "name": "Social media and admin help for local businesses", "category": "Teaching and helping", "what": "Posting updates, answering messages or simple admin for cafés, shops and tradespeople.", "cost": [0, 0], "mode": "online", "customers": ["small_biz"], "areas": ["city", "town"], "rules": [], "cost_label": "£0"}, {"id": "proofreading", "name": "Proofreading and CV help", "category": "Teaching and helping", "what": "Checking CVs, cover letters and assignments for spelling and clarity.", "cost": [0, 0], "mode": "online", "customers": ["students", "time_poor"], "areas": ["city", "town", "rural"], "rules": [], "cost_label": "£0"}, {"id": "event_help", "name": "Party and event helper", "category": "Local and events", "what": "Setting up, serving and tidying at children's parties and family events.", "cost": [0, 0], "mode": "in_person", "customers": ["families", "small_biz"], "areas": ["city", "town", "rural"], "rules": [], "cost_label": "£0"}, {"id": "face_painting", "name": "Face painting at parties and fairs", "category": "Local and events", "what": "Simple face painting at birthday parties, school fairs and festivals.", "cost": [50, 100], "mode": "in_person", "customers": ["families"], "areas": ["town", "rural", "city"], "rules": [], "cost_label": "£50-100"}, {"id": "walking_tours", "name": "Local walking tours", "category": "Local and events", "what": "Showing visitors around your town, its history or its food spots.", "cost": [0, 0], "mode": "in_person", "customers": ["tourists"], "areas": ["city", "town"], "rules": [], "cost_label": "£0"}], "general_rules": [{"text": "The first £1,000 of trading income per tax year, across all side hustles and before expenses, is tax-free (trading allowance).", "source": "trading_allowance"}, {"text": "Above that, register for Self Assessment by 5 October after the end of that tax year.", "source": "register_sa"}, {"text": "Check your employment contract for rules about second jobs or competing work.", "source": null}], "region_drivers": {"London": {"time_poor": 3, "renters": 3, "tourists": 3, "small_biz": 3, "students": 2, "families": 2, "pet_owners": 2, "older": 1, "rural": 0, "online": 2}, "South East": {"families": 3, "time_poor": 3, "older": 2, "pet_owners": 2, "tourists": 2, "rural": 2, "students": 1, "small_biz": 2, "renters": 1, "online": 2}, "South West": {"tourists": 3, "older": 3, "rural": 3, "pet_owners": 2, "families": 2, "students": 1, "small_biz": 1, "time_poor": 1, "renters": 1, "online": 2}, "East of England": {"time_poor": 3, "rural": 3, "families": 2, "older": 2, "tourists": 2, "students": 1, "pet_owners": 2, "small_biz": 1, "renters": 1, "online": 2}, "East Midlands": {"families": 2, "students": 2, "time_poor": 2, "tourists": 2, "rural": 2, "older": 2, "pet_owners": 2, "small_biz": 1, "renters": 1, "online": 2}, "West Midlands": {"students": 2, "small_biz": 2, "families": 2, "time_poor": 2, "rural": 2, "older": 2, "renters": 2, "tourists": 1, "pet_owners": 2, "online": 2}, "North West": {"students": 3, "time_poor": 2, "tourists": 2, "families": 2, "renters": 2, "older": 2, "small_biz": 2, "rural": 1, "pet_owners": 2, "online": 2}, "North East": {"older": 2, "students": 2, "tourists": 2, "rural": 2, "families": 2, "small_biz": 1, "time_poor": 1, "renters": 1, "pet_owners": 2, "online": 2}, "Yorkshire and the Humber": {"tourists": 3, "students": 2, "rural": 2, "families": 2, "older": 2, "time_poor": 2, "small_biz": 1, "renters": 1, "pet_owners": 2, "online": 2}, "Wales": {"tourists": 3, "rural": 3, "older": 2, "students": 2, "families": 2, "pet_owners": 2, "small_biz": 1, "time_poor": 1, "renters": 1, "online": 2}, "Scotland": {"tourists": 3, "rural": 3, "students": 2, "time_poor": 2, "older": 2, "families": 2, "small_biz": 1, "renters": 1, "pet_owners": 2, "online": 2}, "Northern Ireland": {"rural": 3, "families": 3, "tourists": 2, "older": 2, "small_biz": 1, "students": 1, "time_poor": 1, "renters": 1, "pet_owners": 2, "online": 2}}, "area_drivers": {"city": {"time_poor": 2, "renters": 2, "students": 2, "small_biz": 1, "tourists": 1}, "town": {"families": 2, "older": 1, "pet_owners": 1, "time_poor": 1}, "rural": {"rural": 2, "older": 1, "tourists": 1, "pet_owners": 1}}, "verify_with": {"older": "Census age structure (ONS TS007a; NRS Scotland; NISRA)", "students": "Census schoolchildren and full-time students (ONS TS068)", "families": "Census household composition (ONS TS003)", "rural": "Rural-urban classification (Defra, Population statistics for rural England; Scottish/Welsh/NI equivalents)", "tourists": "VisitBritain GB Tourism Survey, regional data", "time_poor": "Census travel to work and hours worked (ONS TS058, TS059)", "renters": "Census tenure (ONS TS054)", "small_biz": "UK Business Counts (ONS IDBR via Nomis)", "pet_owners": "PDSA Animal Wellbeing (PAW) Report, regional figures"}};
+const PROMPTS = {"generic_ai": "You are an assistant helping UK residents come up with ideas for a profitable\nside business they could run alongside a regular job (roughly 5-15 hours per\nweek, low start-up costs).\n\nThe participant has five minutes to brainstorm 5 ideas for a side business.\n\nRules:\n- When asked for ideas, suggest exactly 5 side-business ideas per reply, as a\n  numbered list of short idea phrases (at most 12 words each),\n  e.g. \"Evening meal-prep delivery for night-shift nurses\".\n- Do not add explanations unless the participant asks for them.\n- Keep each reply under 120 words. Use plain, friendly British English.\n- You may vary, combine or adjust ideas when the participant asks.\n- Do not ask the participant for personal details such as their name, address,\n  employer or contact information.\n- Do not tell the participant what you know about them or their area unless\n  they ask; just give the ideas.\n- Stay on the topic of side-business ideas. If asked about something else,\n  politely steer back to the task.\n\nOnly suggest side hustles that need no specific training or qualification and\nlittle money to start (up to about £250), like those in the catalogue below.\nBuild on the catalogue, and make each idea specific (who it is for, what exactly\nis offered). Mix different kinds of ideas. If an idea needs a registration or\nlicence, add it in brackets, e.g. \"(register with council)\".\n\nCatalogue of low-barrier side hustles (UK rules checked 16 October 2026):\nCare and home services:\n- Evening babysitting (start-up £0; customers: families with children). Rule: In England, babysitting in the child's home only between 6pm and 2am doesn't need Ofsted registration; daytime or after-school care needs a different exemption.; If your role is eligible, you can apply for your own DBS check through an Umbrella Body, and parents can ask to see it.\n- Dog walking (start-up up to £50; customers: pet owners, busy workers and commuters short on time, older people and retirees). Rule: No licence needed to walk dogs or visit them in the owner's home (Defra is reviewing this).; In England, boarding dogs in your own home as a business needs a council licence.\n- Pet sitting in the owner's home (start-up £0; customers: pet owners, visitors and holiday lets, busy workers and commuters short on time). Rule: Visiting pets in the owner's home needs no licence.; In England, boarding dogs or cats at your home as a business needs a council licence.\n- House sitting and plant watering (start-up £0; customers: busy workers and commuters short on time, older people and retirees, visitors and holiday lets). Rule: Offering paid key holding under a contract can need an SIA licence.\n- Home cleaning (start-up £20-100; customers: busy workers and commuters short on time, older people and retirees, renters and people moving home)\n- Holiday-let changeover cleaning (start-up £20-100; customers: visitors and holiday lets)\n- Ironing and laundry service (start-up up to £50; customers: busy workers and commuters short on time, older people and retirees)\n- Garden tidying and lawn mowing (start-up up to £250; customers: older people and retirees, families with children, busy workers and commuters short on time, rural residents far from services). Rule: Taking garden waste away for customers needs waste carrier registration (England).\n- Odd jobs and flat-pack assembly (start-up £50-150; customers: renters and people moving home, busy workers and commuters short on time, older people and retirees). Rule: Stick to simple jobs; leave gas and electrical installation to registered trades.; Taking old packaging or waste away needs waste carrier registration (England).\n- Errands and shopping for older people (start-up £0; customers: older people and retirees, rural residents far from services). Rule: Driving people for payment needs a private hire licence, so offer errands, not paid lifts.\n- Car washing at people's homes (start-up £30-100; customers: busy workers and commuters short on time, families with children)\nSelling products:\n- Selling your own unwanted clothes and items online (start-up £0; customers: online buyers anywhere in the uk). Rule: Selling your own unwanted things is usually tax-free; platforms report sellers with 30+ sales or about £1,700 a year, which doesn't by itself mean tax is due.\n- Buying and reselling second-hand and vintage finds (start-up £50-200; customers: online buyers anywhere in the uk, students and young adults). Rule: Buying to resell counts as trading: total trading income over £1,000 a year (before expenses) must be reported to HMRC.\n- Home baking to order (start-up £30-100; customers: families with children, small local businesses). Rule: Register as a food business with your council (free) at least 28 days before you start (England, Wales, NI).; A hygiene certificate isn't compulsory, but you must be able to show you've been adequately trained in food hygiene; expect a home inspection.\n- Upcycling and reselling furniture (start-up £50-200; customers: renters and people moving home, online buyers anywhere in the uk, students and young adults). Rule: Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.\n- Handmade crafts and cards (start-up £30-100; customers: online buyers anywhere in the uk, visitors and holiday lets). Rule: Toys for children must meet toy safety rules; check before selling soft toys.; Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.\n- Market or car-boot stall (start-up £10-50; customers: families with children, visitors and holiday lets, older people and retirees). Rule: Selling at a council market needs a casual or permanent licence from the council.\n- Growing and selling plants and seedlings (start-up £20-50; customers: families with children, older people and retirees)\n- Digital printables and templates (start-up £0; customers: online buyers anywhere in the uk). Rule: Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.\nTeaching and helping:\n- Tutoring a school subject you're good at (start-up £0; customers: families with children, students and young adults). Rule: Self-employed tutors working with children can apply for their own Enhanced DBS check, and parents can ask to see it.\n- Teaching a hobby or language conversation (start-up up to £50; customers: older people and retirees, families with children, students and young adults)\n- Tech help for older people (start-up £0; customers: older people and retirees, rural residents far from services)\n- Social media and admin help for local businesses (start-up £0; customers: small local businesses)\n- Proofreading and CV help (start-up £0; customers: students and young adults, busy workers and commuters short on time)\nLocal and events:\n- Party and event helper (start-up £0; customers: families with children, small local businesses)\n- Face painting at parties and fairs (start-up £50-100; customers: families with children)\n- Local walking tours (start-up £0; customers: visitors and holiday lets)\nGeneral: The first £1,000 of trading income per tax year, across all side hustles and before expenses, is tax-free (trading allowance). Above that, register for Self Assessment by 5 October after the end of that tax year. Check your employment contract for rules about second jobs or competing work.\n\nLocal area of this participant (from the survey):\n- Region: ${store:region}\n- City or town: ${store:town}\n- Type of area: ${store:area_type}\n\nEvery idea must fit real demand in this participant's local area. Use the\nnotes below for their region and type of area. If the region or type of area\nis missing or unclear, use demand that is common across the UK.\n\nTypical local demand by UK region:\n\nLondon:\n- very high living costs and many time-poor commuters and professionals: demand for convenience services such as meal prep, errands, pet care, cleaning and laundry\n- large private rental market and small homes: furniture assembly, decluttering, storage and small-space solutions\n- huge visitor numbers and very diverse food and culture scene: walking tours, food stalls, pop-ups and cultural experiences\n- many small businesses and freelancers: admin and social media help\n- strong demand for tutoring and language conversation practice\n\nSouth East:\n- affluent commuter towns with many dual-earner families: tutoring, after-school activities, home and garden maintenance, pet care\n- coastal and countryside tourism: holiday-let cleaning and changeovers, local tours, outdoor activities\n- older populations in many coastal towns: home help, gardening, digital help for older people\n- rural and equestrian areas: pet and animal care, rural home services\n\nSouth West:\n- strong, seasonal tourism along the coast and in national parks: holiday-let changeovers, local food and crafts, walking tours\n- a large retired population: gardening, home help, companionship, tech support\n- remote rural areas with fewer local services: errands, deliveries, house and pet sitting, and online selling\n- a large young population in Bristol: event help, reselling, tutoring\n\nEast of England:\n- commuter belt around London: convenience, childcare-related and home services\n- large agricultural and rural areas: farm-shop and local produce, rural services\n- university city of Cambridge: tutoring, proofreading, student services\n- coastal resorts in Norfolk, Suffolk and Essex: tourism and holiday-let services\n- fast-growing new-build towns: handyman work, gardening and landscaping\n\nEast Midlands:\n- manufacturing and logistics hubs with shift workers: dog walking, cleaning, ironing at flexible times\n- large student populations in Nottingham, Leicester and Loughborough: tutoring, student services, food and events\n- relatively affordable housing and growing families: home improvement, children's activities\n- Peak District tourism: holiday-let changeovers, local walking tours\n- very diverse communities, especially in Leicester: cultural food, events and celebrations\n\nWest Midlands:\n- Birmingham's large, young and diverse population: home baking, event help, reselling\n- strong maker tradition: upcycling and handmade goods\n- many small businesses: social media and admin help\n- rural Shropshire, Herefordshire and Worcestershire: plants and produce, holiday-let changeovers\n\nNorth West:\n- large student and young-professional populations in Manchester and Liverpool: tutoring, proofreading, reselling, event help\n- Lake District tourism: holiday-let changeovers, local crafts\n- strong sport and music culture: event help, selling second-hand gear\n- former mill towns with lower living costs: affordable home improvement and personal services\n\nNorth East:\n- lower living costs and strong community identity: local, community-based services\n- universities in Newcastle, Durham and Sunderland: student services and tutoring\n- coastal and Northumberland tourism: holiday-let and outdoor services\n- ageing population in some areas: home help, companionship, tech support\n- fewer high-street services in some towns: mobile and online services\n\nYorkshire and the Humber:\n- cities with students and young professionals (Leeds, Sheffield, York): tutoring, food, events\n- tourism in York, the Dales, the Moors and the coast: tours, holiday-let services\n- strong outdoor culture: walking tours, selling second-hand outdoor gear\n- agricultural areas: local produce, farm diversification, rural services\n- lower living costs than the South: affordable personal and home services\n\nWales:\n- strong tourism in Eryri (Snowdonia), Pembrokeshire and the coast: holiday-let changeovers, local crafts, walking tours\n- rural communities with long distances to services: mobile services, delivery, online selling\n- Welsh-language communities: Welsh conversation practice and tutoring\n- cities with students in Cardiff and Swansea: tutoring, student services, events\n\nScotland:\n- major tourism and festivals in Edinburgh: walking tours, short-let changeovers, event help\n- Glasgow's large city population: home baking, event help, cleaning, reselling\n- remote Highlands and islands: online selling, holiday-let changeovers, errands\n- strong outdoor culture: selling second-hand outdoor gear, walking tours\n\nNorthern Ireland:\n- Belfast's growing tourism: walking tours, event help, short-let changeovers\n- strong community life and local events: catering, event services, community activities\n- rural and agricultural areas: local produce, rural services, mobile services\n- Causeway Coast and other tourism areas: holiday-let changeovers, local crafts\n\nNotes by type of area:\n- City: dense population, many renters and time-poor people, strong demand for convenience, delivery, events and student services\n- Town or suburb: many families and commuters, demand for home, garden, children's and local community services\n- Village or rural area: few local services and long distances, so mobile services, online selling, tourism and community services work well\n\nBest-fitting side hustles from the catalogue, by region:\n- London: pet sitting in the owner's home, home cleaning, upcycling and reselling furniture, market or car-boot stall, party and event helper, proofreading and cv help, local walking tours, social media and admin help for local businesses\n- South East: garden tidying and lawn mowing, dog walking, market or car-boot stall, teaching a hobby or language conversation, growing and selling plants and seedlings, party and event helper, proofreading and cv help, face painting at parties and fairs\n- South West: garden tidying and lawn mowing, market or car-boot stall, house sitting and plant watering, teaching a hobby or language conversation, tech help for older people, growing and selling plants and seedlings, local walking tours, party and event helper\n- East of England: garden tidying and lawn mowing, dog walking, tech help for older people, proofreading and cv help, market or car-boot stall, growing and selling plants and seedlings, party and event helper, face painting at parties and fairs\n- East Midlands: garden tidying and lawn mowing, dog walking, market or car-boot stall, teaching a hobby or language conversation, upcycling and reselling furniture, proofreading and cv help, party and event helper, face painting at parties and fairs\n- West Midlands: garden tidying and lawn mowing, dog walking, teaching a hobby or language conversation, upcycling and reselling furniture, market or car-boot stall, party and event helper, proofreading and cv help, face painting at parties and fairs\n- North West: teaching a hobby or language conversation, upcycling and reselling furniture, buying and reselling second-hand and vintage finds, proofreading and cv help, garden tidying and lawn mowing, dog walking, party and event helper, face painting at parties and fairs\n- North East: garden tidying and lawn mowing, market or car-boot stall, teaching a hobby or language conversation, dog walking, upcycling and reselling furniture, tech help for older people, party and event helper, face painting at parties and fairs\n- Yorkshire and the Humber: house sitting and plant watering, market or car-boot stall, pet sitting in the owner's home, handmade crafts and cards, local walking tours, teaching a hobby or language conversation, proofreading and cv help, party and event helper\n- Wales: garden tidying and lawn mowing, market or car-boot stall, house sitting and plant watering, handmade crafts and cards, tech help for older people, local walking tours, teaching a hobby or language conversation, party and event helper\n- Scotland: garden tidying and lawn mowing, house sitting and plant watering, market or car-boot stall, handmade crafts and cards, tech help for older people, local walking tours, teaching a hobby or language conversation, party and event helper\n- Northern Ireland: garden tidying and lawn mowing, market or car-boot stall, teaching a hobby or language conversation, errands and shopping for older people, growing and selling plants and seedlings, tech help for older people, party and event helper, face painting at parties and fairs\nAdjust for type of area:\n- City: favour home cleaning, odd jobs and flat-pack assembly, proofreading and cv help, teaching a hobby or language conversation, buying and reselling second-hand and vintage finds, handmade crafts and cards\n- Town or suburb: favour garden tidying and lawn mowing, market or car-boot stall, teaching a hobby or language conversation, car washing at people's homes, growing and selling plants and seedlings, party and event helper\n- Village or rural area: favour garden tidying and lawn mowing, errands and shopping for older people, tech help for older people, market or car-boot stall, teaching a hobby or language conversation, growing and selling plants and seedlings\n\nDo NOT tailor ideas to the participant's personal interests, hobbies, skills,\njob, age, gender or background, even if they mention them. If they share\npersonal details, acknowledge them briefly and keep suggesting ideas that\nwould suit most people living in this area.\n", "personalized_ai": "You are an assistant helping UK residents come up with ideas for a profitable\nside business they could run alongside a regular job (roughly 5-15 hours per\nweek, low start-up costs).\n\nThe participant has five minutes to brainstorm 5 ideas for a side business.\n\nRules:\n- When asked for ideas, suggest exactly 5 side-business ideas per reply, as a\n  numbered list of short idea phrases (at most 12 words each),\n  e.g. \"Evening meal-prep delivery for night-shift nurses\".\n- Do not add explanations unless the participant asks for them.\n- Keep each reply under 120 words. Use plain, friendly British English.\n- You may vary, combine or adjust ideas when the participant asks.\n- Do not ask the participant for personal details such as their name, address,\n  employer or contact information.\n- Do not tell the participant what you know about them or their area unless\n  they ask; just give the ideas.\n- Stay on the topic of side-business ideas. If asked about something else,\n  politely steer back to the task.\n\nOnly suggest side hustles that need no specific training or qualification and\nlittle money to start (up to about £250), like those in the catalogue below.\nBuild on the catalogue, and make each idea specific (who it is for, what exactly\nis offered). Mix different kinds of ideas. If an idea needs a registration or\nlicence, add it in brackets, e.g. \"(register with council)\".\n\nCatalogue of low-barrier side hustles (UK rules checked 16 October 2026):\nCare and home services:\n- Evening babysitting (start-up £0; customers: families with children). Rule: In England, babysitting in the child's home only between 6pm and 2am doesn't need Ofsted registration; daytime or after-school care needs a different exemption.; If your role is eligible, you can apply for your own DBS check through an Umbrella Body, and parents can ask to see it.\n- Dog walking (start-up up to £50; customers: pet owners, busy workers and commuters short on time, older people and retirees). Rule: No licence needed to walk dogs or visit them in the owner's home (Defra is reviewing this).; In England, boarding dogs in your own home as a business needs a council licence.\n- Pet sitting in the owner's home (start-up £0; customers: pet owners, visitors and holiday lets, busy workers and commuters short on time). Rule: Visiting pets in the owner's home needs no licence.; In England, boarding dogs or cats at your home as a business needs a council licence.\n- House sitting and plant watering (start-up £0; customers: busy workers and commuters short on time, older people and retirees, visitors and holiday lets). Rule: Offering paid key holding under a contract can need an SIA licence.\n- Home cleaning (start-up £20-100; customers: busy workers and commuters short on time, older people and retirees, renters and people moving home)\n- Holiday-let changeover cleaning (start-up £20-100; customers: visitors and holiday lets)\n- Ironing and laundry service (start-up up to £50; customers: busy workers and commuters short on time, older people and retirees)\n- Garden tidying and lawn mowing (start-up up to £250; customers: older people and retirees, families with children, busy workers and commuters short on time, rural residents far from services). Rule: Taking garden waste away for customers needs waste carrier registration (England).\n- Odd jobs and flat-pack assembly (start-up £50-150; customers: renters and people moving home, busy workers and commuters short on time, older people and retirees). Rule: Stick to simple jobs; leave gas and electrical installation to registered trades.; Taking old packaging or waste away needs waste carrier registration (England).\n- Errands and shopping for older people (start-up £0; customers: older people and retirees, rural residents far from services). Rule: Driving people for payment needs a private hire licence, so offer errands, not paid lifts.\n- Car washing at people's homes (start-up £30-100; customers: busy workers and commuters short on time, families with children)\nSelling products:\n- Selling your own unwanted clothes and items online (start-up £0; customers: online buyers anywhere in the uk). Rule: Selling your own unwanted things is usually tax-free; platforms report sellers with 30+ sales or about £1,700 a year, which doesn't by itself mean tax is due.\n- Buying and reselling second-hand and vintage finds (start-up £50-200; customers: online buyers anywhere in the uk, students and young adults). Rule: Buying to resell counts as trading: total trading income over £1,000 a year (before expenses) must be reported to HMRC.\n- Home baking to order (start-up £30-100; customers: families with children, small local businesses). Rule: Register as a food business with your council (free) at least 28 days before you start (England, Wales, NI).; A hygiene certificate isn't compulsory, but you must be able to show you've been adequately trained in food hygiene; expect a home inspection.\n- Upcycling and reselling furniture (start-up £50-200; customers: renters and people moving home, online buyers anywhere in the uk, students and young adults). Rule: Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.\n- Handmade crafts and cards (start-up £30-100; customers: online buyers anywhere in the uk, visitors and holiday lets). Rule: Toys for children must meet toy safety rules; check before selling soft toys.; Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.\n- Market or car-boot stall (start-up £10-50; customers: families with children, visitors and holiday lets, older people and retirees). Rule: Selling at a council market needs a casual or permanent licence from the council.\n- Growing and selling plants and seedlings (start-up £20-50; customers: families with children, older people and retirees)\n- Digital printables and templates (start-up £0; customers: online buyers anywhere in the uk). Rule: Total trading income over £1,000 a year (before expenses, across all side hustles) must be reported to HMRC.\nTeaching and helping:\n- Tutoring a school subject you're good at (start-up £0; customers: families with children, students and young adults). Rule: Self-employed tutors working with children can apply for their own Enhanced DBS check, and parents can ask to see it.\n- Teaching a hobby or language conversation (start-up up to £50; customers: older people and retirees, families with children, students and young adults)\n- Tech help for older people (start-up £0; customers: older people and retirees, rural residents far from services)\n- Social media and admin help for local businesses (start-up £0; customers: small local businesses)\n- Proofreading and CV help (start-up £0; customers: students and young adults, busy workers and commuters short on time)\nLocal and events:\n- Party and event helper (start-up £0; customers: families with children, small local businesses)\n- Face painting at parties and fairs (start-up £50-100; customers: families with children)\n- Local walking tours (start-up £0; customers: visitors and holiday lets)\nGeneral: The first £1,000 of trading income per tax year, across all side hustles and before expenses, is tax-free (trading allowance). Above that, register for Self Assessment by 5 October after the end of that tax year. Check your employment contract for rules about second jobs or competing work.\n\nLocal area of this participant (from the survey):\n- Region: ${store:region}\n- City or town: ${store:town}\n- Type of area: ${store:area_type}\n\nEvery idea must fit real demand in this participant's local area. Use the\nnotes below for their region and type of area. If the region or type of area\nis missing or unclear, use demand that is common across the UK.\n\nTypical local demand by UK region:\n\nLondon:\n- very high living costs and many time-poor commuters and professionals: demand for convenience services such as meal prep, errands, pet care, cleaning and laundry\n- large private rental market and small homes: furniture assembly, decluttering, storage and small-space solutions\n- huge visitor numbers and very diverse food and culture scene: walking tours, food stalls, pop-ups and cultural experiences\n- many small businesses and freelancers: admin and social media help\n- strong demand for tutoring and language conversation practice\n\nSouth East:\n- affluent commuter towns with many dual-earner families: tutoring, after-school activities, home and garden maintenance, pet care\n- coastal and countryside tourism: holiday-let cleaning and changeovers, local tours, outdoor activities\n- older populations in many coastal towns: home help, gardening, digital help for older people\n- rural and equestrian areas: pet and animal care, rural home services\n\nSouth West:\n- strong, seasonal tourism along the coast and in national parks: holiday-let changeovers, local food and crafts, walking tours\n- a large retired population: gardening, home help, companionship, tech support\n- remote rural areas with fewer local services: errands, deliveries, house and pet sitting, and online selling\n- a large young population in Bristol: event help, reselling, tutoring\n\nEast of England:\n- commuter belt around London: convenience, childcare-related and home services\n- large agricultural and rural areas: farm-shop and local produce, rural services\n- university city of Cambridge: tutoring, proofreading, student services\n- coastal resorts in Norfolk, Suffolk and Essex: tourism and holiday-let services\n- fast-growing new-build towns: handyman work, gardening and landscaping\n\nEast Midlands:\n- manufacturing and logistics hubs with shift workers: dog walking, cleaning, ironing at flexible times\n- large student populations in Nottingham, Leicester and Loughborough: tutoring, student services, food and events\n- relatively affordable housing and growing families: home improvement, children's activities\n- Peak District tourism: holiday-let changeovers, local walking tours\n- very diverse communities, especially in Leicester: cultural food, events and celebrations\n\nWest Midlands:\n- Birmingham's large, young and diverse population: home baking, event help, reselling\n- strong maker tradition: upcycling and handmade goods\n- many small businesses: social media and admin help\n- rural Shropshire, Herefordshire and Worcestershire: plants and produce, holiday-let changeovers\n\nNorth West:\n- large student and young-professional populations in Manchester and Liverpool: tutoring, proofreading, reselling, event help\n- Lake District tourism: holiday-let changeovers, local crafts\n- strong sport and music culture: event help, selling second-hand gear\n- former mill towns with lower living costs: affordable home improvement and personal services\n\nNorth East:\n- lower living costs and strong community identity: local, community-based services\n- universities in Newcastle, Durham and Sunderland: student services and tutoring\n- coastal and Northumberland tourism: holiday-let and outdoor services\n- ageing population in some areas: home help, companionship, tech support\n- fewer high-street services in some towns: mobile and online services\n\nYorkshire and the Humber:\n- cities with students and young professionals (Leeds, Sheffield, York): tutoring, food, events\n- tourism in York, the Dales, the Moors and the coast: tours, holiday-let services\n- strong outdoor culture: walking tours, selling second-hand outdoor gear\n- agricultural areas: local produce, farm diversification, rural services\n- lower living costs than the South: affordable personal and home services\n\nWales:\n- strong tourism in Eryri (Snowdonia), Pembrokeshire and the coast: holiday-let changeovers, local crafts, walking tours\n- rural communities with long distances to services: mobile services, delivery, online selling\n- Welsh-language communities: Welsh conversation practice and tutoring\n- cities with students in Cardiff and Swansea: tutoring, student services, events\n\nScotland:\n- major tourism and festivals in Edinburgh: walking tours, short-let changeovers, event help\n- Glasgow's large city population: home baking, event help, cleaning, reselling\n- remote Highlands and islands: online selling, holiday-let changeovers, errands\n- strong outdoor culture: selling second-hand outdoor gear, walking tours\n\nNorthern Ireland:\n- Belfast's growing tourism: walking tours, event help, short-let changeovers\n- strong community life and local events: catering, event services, community activities\n- rural and agricultural areas: local produce, rural services, mobile services\n- Causeway Coast and other tourism areas: holiday-let changeovers, local crafts\n\nNotes by type of area:\n- City: dense population, many renters and time-poor people, strong demand for convenience, delivery, events and student services\n- Town or suburb: many families and commuters, demand for home, garden, children's and local community services\n- Village or rural area: few local services and long distances, so mobile services, online selling, tourism and community services work well\n\nBest-fitting side hustles from the catalogue, by region:\n- London: pet sitting in the owner's home, home cleaning, upcycling and reselling furniture, market or car-boot stall, party and event helper, proofreading and cv help, local walking tours, social media and admin help for local businesses\n- South East: garden tidying and lawn mowing, dog walking, market or car-boot stall, teaching a hobby or language conversation, growing and selling plants and seedlings, party and event helper, proofreading and cv help, face painting at parties and fairs\n- South West: garden tidying and lawn mowing, market or car-boot stall, house sitting and plant watering, teaching a hobby or language conversation, tech help for older people, growing and selling plants and seedlings, local walking tours, party and event helper\n- East of England: garden tidying and lawn mowing, dog walking, tech help for older people, proofreading and cv help, market or car-boot stall, growing and selling plants and seedlings, party and event helper, face painting at parties and fairs\n- East Midlands: garden tidying and lawn mowing, dog walking, market or car-boot stall, teaching a hobby or language conversation, upcycling and reselling furniture, proofreading and cv help, party and event helper, face painting at parties and fairs\n- West Midlands: garden tidying and lawn mowing, dog walking, teaching a hobby or language conversation, upcycling and reselling furniture, market or car-boot stall, party and event helper, proofreading and cv help, face painting at parties and fairs\n- North West: teaching a hobby or language conversation, upcycling and reselling furniture, buying and reselling second-hand and vintage finds, proofreading and cv help, garden tidying and lawn mowing, dog walking, party and event helper, face painting at parties and fairs\n- North East: garden tidying and lawn mowing, market or car-boot stall, teaching a hobby or language conversation, dog walking, upcycling and reselling furniture, tech help for older people, party and event helper, face painting at parties and fairs\n- Yorkshire and the Humber: house sitting and plant watering, market or car-boot stall, pet sitting in the owner's home, handmade crafts and cards, local walking tours, teaching a hobby or language conversation, proofreading and cv help, party and event helper\n- Wales: garden tidying and lawn mowing, market or car-boot stall, house sitting and plant watering, handmade crafts and cards, tech help for older people, local walking tours, teaching a hobby or language conversation, party and event helper\n- Scotland: garden tidying and lawn mowing, house sitting and plant watering, market or car-boot stall, handmade crafts and cards, tech help for older people, local walking tours, teaching a hobby or language conversation, party and event helper\n- Northern Ireland: garden tidying and lawn mowing, market or car-boot stall, teaching a hobby or language conversation, errands and shopping for older people, growing and selling plants and seedlings, tech help for older people, party and event helper, face painting at parties and fairs\nAdjust for type of area:\n- City: favour home cleaning, odd jobs and flat-pack assembly, proofreading and cv help, teaching a hobby or language conversation, buying and reselling second-hand and vintage finds, handmade crafts and cards\n- Town or suburb: favour garden tidying and lawn mowing, market or car-boot stall, teaching a hobby or language conversation, car washing at people's homes, growing and selling plants and seedlings, party and event helper\n- Village or rural area: favour garden tidying and lawn mowing, errands and shopping for older people, tech help for older people, market or car-boot stall, teaching a hobby or language conversation, growing and selling plants and seedlings\n\nParticipant interest profile (from the survey):\n- Age: ${store:age}\n- Gender: ${store:gender}\n- Job title: ${store:occupation}\n- Line of work: ${store:sector}\n- Years in that line of work: ${store:years_in_sector}\n- Highest qualification: ${store:education}\n- Enjoys doing in free time: ${store:free_time}\n- Main skills and strengths in and outside of work: ${store:skills}\n- Activities or topics they can lose themselves in: ${store:lose_yourself}\n\nTailor every idea to this person as well as to the area: each idea must\nclearly build on at least one of their interests, hobbies or skills (you may\nadd the matching interest in brackets after the phrase). You may also build on\ntheir job, line of work and experience. Use age, years of experience and\nqualification only to judge what is realistic for them (time, experience,\nbudget). Never base ideas on gender, age or other stereotypes.\n"};
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const AREA_LABEL = { city: "City", town: "Town or suburb", rural: "Village or rural area" };
+const MODE_LABEL = { in_person: "In person", online: "Online", both: "In person or online" };
+const regions = Object.keys(DATA.region_drivers);
+const SHORT = { time_poor: "Busy workers", families: "Families", older: "Older people", pet_owners: "Pet owners",
+    students: "Students", tourists: "Visitors", small_biz: "Small businesses", renters: "Renters", rural: "Rural residents", online: "Online buyers" };
+
+// Same scoring as side_hustles.py: strongest customer group counts fully, others add 0.1 each; wrong area type -3.
+function weightsFor(region, area) {
+    const w = Object.assign({}, region ? DATA.region_drivers[region] : Object.fromEntries(Object.keys(DATA.drivers).map((k) => [k, 1])));
+    Object.entries(DATA.area_drivers[area] || {}).forEach(([k, v]) => { w[k] = (w[k] || 0) + v; });
+    return w;
+}
+function score(h, w, area) {
+    const vals = h.customers.map((c) => w[c] || 0).sort((a, b) => b - a);
+    let s = vals.length ? vals[0] + 0.1 * vals.slice(1).reduce((a, b) => a + b, 0) : 0;
+    if (area && !h.areas.includes(area)) { s -= 3; }
+    return Math.round(s * 100) / 100;
+}
+function dots(n) {
+    return '<span class="dots" aria-label="' + n + ' of 3">' + [1, 2, 3].map((i) => '<i class="' + (i <= n ? "on" : "") + '"></i>').join("") + "</span>";
+}
+function sourceLink(key) {
+    if (!key) { return '<span class="muted">general guidance</span>'; }
+    const s = DATA.sources[key];
+    return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.title.split(" (")[0]) + "</a>";
+}
+
+const state = { region: "South West", area: "rural", budget: 250, mode: "any" };
+
+function renderFinder() {
+    const w = weightsFor(state.region, state.area);
+    const list = DATA.hustles
+        .filter((h) => h.cost[1] <= state.budget)
+        .filter((h) => state.mode === "any" || h.mode === state.mode || h.mode === "both")
+        .map((h) => ({ h, s: score(h, w, state.area) }))
+        .sort((a, b) => b.s - a.s || a.h.name.localeCompare(b.h.name));
+    const where = [state.region || "Anywhere in the UK", state.area ? AREA_LABEL[state.area].toLowerCase() : null].filter(Boolean).join(", ");
+    $("#result-title").textContent = "Best fits: " + where;
+    $("#result-count").textContent = list.length + " of " + DATA.hustles.length + " side hustles match the filters";
+    $("#results").innerHTML = list.map(({ h, s }, i) => {
+        const strong = h.customers.map((c) => ({ c, v: w[c] || 0 })).sort((a, b) => b.v - a.v).filter((x) => x.v > 0).slice(0, 2);
+        const fit = strong.length ? "Demand from " + strong.map((x) => "<b>" + esc(DATA.drivers[x.c].toLowerCase()) + "</b>").join(" and ") : "General demand";
+        const offArea = state.area && !h.areas.includes(state.area) ? " &middot; less suited to this type of area" : "";
+        const rules = h.rules.map((r) => '<li><span class="tag">Rule</span><span>' + esc(r.text) + "</span>" + sourceLink(r.source) + "</li>").join("");
+        return '<li class="card">' +
+            '<span class="rank" aria-hidden="true">' + (i + 1) + "</span>" +
+            '<div class="body"><h3>' + esc(h.name) + "</h3>" +
+            "<p>" + esc(h.what) + "</p>" +
+            '<p class="fit">' + fit + offArea + "</p>" +
+            '<div class="chips"><span class="chip cat">' + esc(h.category) + '</span><span class="chip">' + esc(MODE_LABEL[h.mode]) + "</span></div>" +
+            (rules ? '<ul class="rules">' + rules + "</ul>" : "") + "</div>" +
+            '<div class="cost"><span class="small muted">Start-up</span><span class="mono">' + esc(h.cost_label.replace("-", "–")) + "</span>" +
+            '<span class="small muted mono">fit ' + s.toFixed(1) + "</span></div></li>";
+    }).join("") || '<li class="card"><span></span><div class="body"><p>No side hustle matches these filters. Raise the budget or choose "Any".</p></div></li>';
+}
+
+function renderCatalogue() {
+    const rows = DATA.hustles.map((h) => "<tr><td><b>" + esc(h.name) + "</b><br><span class=\"muted\">" + esc(h.what) + "</span></td>" +
+        "<td>" + esc(h.category) + '</td><td class="num">' + esc(h.cost_label.replace("-", "–")) + "</td><td>" + esc(MODE_LABEL[h.mode]) + "</td>" +
+        "<td>" + h.customers.map((c) => esc(DATA.drivers[c])).join("<br>") + "</td>" +
+        "<td>" + (h.rules.length ? h.rules.map((r) => esc(r.text) + " " + sourceLink(r.source)).join("<br>") : '<span class="muted">None found</span>') + "</td></tr>").join("");
+    $("#cat-table").innerHTML = "<thead><tr><th>Side hustle</th><th>Category</th><th>Start-up</th><th>How</th><th>Customers</th><th>Rules</th></tr></thead><tbody>" + rows + "</tbody>";
+}
+
+function renderRegions() {
+    const drivers = Object.keys(DATA.drivers).filter((d) => d !== "online");
+    $("#region-table").innerHTML = "<thead><tr><th>Region</th>" + drivers.map((d) => '<th title="' + esc(DATA.drivers[d]) + '">' + esc(SHORT[d]) + "</th>").join("") + "</tr></thead><tbody>" +
+        regions.map((r) => '<tr><td class="rname"><b>' + esc(r) + "</b></td>" + drivers.map((d) => "<td>" + dots(DATA.region_drivers[r][d] || 0) + "</td>").join("") + "</tr>").join("") + "</tbody>";
+    $("#verify-table").innerHTML = "<thead><tr><th>Customer group</th><th>Check against</th></tr></thead><tbody>" +
+        Object.entries(DATA.verify_with).map(([k, v]) => "<tr><td>" + esc(DATA.drivers[k]) + "</td><td>" + esc(v) + "</td></tr>").join("") + "</tbody>";
+}
+
+function renderSources() {
+    $("#sources-lede").textContent = "Every rule in the catalogue links to one of these pages. Checked on " + DATA.checked_on + ". Rules can change: check again before the pilot.";
+    $("#source-list").innerHTML = Object.entries(DATA.sources).map(([k, s]) =>
+        '<li><span class="key">' + esc(k) + "</span><h3>" + esc(s.title) + "</h3><p>" + esc(s.finding) + "</p>" +
+        '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.url) + "</a></li>").join("");
+}
+
+function renderFacts() {
+    const free = DATA.hustles.filter((h) => h.cost[1] === 0).length;
+    const ruled = DATA.hustles.filter((h) => h.rules.some((r) => r.source)).length;
+    $("#facts").innerHTML = "<span><b>" + DATA.hustles.length + "</b> side hustles</span><span><b>" + free + "</b> cost nothing to start</span>" +
+        "<span><b>" + ruled + "</b> carry an official rule</span><span><b>£1,000</b> tax-free trading allowance per tax year</span>" +
+        "<span>Rules checked " + esc(DATA.checked_on) + "</span>";
+}
+
+// Filters
+const regionSel = $("#f-region");
+regionSel.innerHTML = '<option value="">Anywhere in the UK</option>' + regions.map((r) => "<option>" + esc(r) + "</option>").join("");
+regionSel.value = state.region;
+$("#f-area").value = state.area;
+regionSel.addEventListener("change", () => { state.region = regionSel.value; renderFinder(); });
+$("#f-area").addEventListener("change", (e) => { state.area = e.target.value; renderFinder(); });
+function seg(id, key, parse) {
+    $(id).addEventListener("click", (e) => {
+        const b = e.target.closest("button"); if (!b) { return; }
+        $(id).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        state[key] = parse(b.dataset.v); renderFinder();
+    });
+}
+seg("#f-budget", "budget", Number);
+seg("#f-mode", "mode", String);
+$("#filters").addEventListener("submit", (e) => e.preventDefault());
+
+// Tabs (deep-link with #finder, #catalogue, #regions, #ai, #sources)
+const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+function show(id) {
+    tabs.forEach((t) => {
+        const on = t.getAttribute("aria-controls") === id;
+        t.setAttribute("aria-selected", String(on));
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+    });
+}
+tabs.forEach((t) => t.addEventListener("click", () => {
+    const id = t.getAttribute("aria-controls");
+    show(id);
+    try { history.replaceState(null, "", "#" + id); } catch (e) { /* ignore */ }
+}));
+const start = location.hash.replace("#", "");
+if (tabs.some((t) => t.getAttribute("aria-controls") === start)) { show(start); }
+
+// Copy buttons
+document.querySelectorAll("[data-copy]").forEach((btn) => btn.addEventListener("click", () => {
+    const pre = document.getElementById(btn.dataset.copy);
+    const done = () => { btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy text"; }, 1500); };
+    const select = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected: press Ctrl+C"; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pre.textContent).then(done, select);
+    } else { select(); }
+}));
+
+$("#p-generic").textContent = PROMPTS.generic_ai;
+$("#p-personal").textContent = PROMPTS.personalized_ai;
+renderFacts(); renderFinder(); renderCatalogue(); renderRegions(); renderSources();
+</script>
